@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import Navbar from '@/components/layout/Navbar';
@@ -9,7 +9,7 @@ import ProductCard from '@/components/product/ProductCard';
 import { productApi, categoryApi, getCategoryName } from '@/lib/api';
 import i18n from '@/i18n/config';
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const { t } = useTranslation('common');
   const lang = i18n.language || 'vi';
   const router = useRouter();
@@ -217,5 +217,13 @@ export default function ProductsPage() {
       </div>
       <Footer />
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div style={{ background: 'var(--bg)', minHeight: '100vh' }} />}>
+      <ProductsPageContent />
+    </Suspense>
   );
 }

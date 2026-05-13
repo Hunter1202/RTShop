@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +9,7 @@ import Footer from '@/components/layout/Footer';
 import { formatVND } from '@/lib/api';
 import i18n from '@/i18n/config';
 
-export default function OrderSuccessPage() {
+function OrderSuccessContent() {
   const { t } = useTranslation('common');
   const lang = i18n.language || 'vi';
   const params = useSearchParams();
@@ -99,6 +100,14 @@ export default function OrderSuccessPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={<div style={{ background: 'var(--bg)', minHeight: '100vh' }} />}>
+      <OrderSuccessContent />
+    </Suspense>
   );
 }
 
