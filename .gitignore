@@ -1,0 +1,28 @@
+# dependencies
+node_modules
+
+# next
+.next
+out
+
+# production
+build
+dist
+
+# env
+.env
+.env.local
+.env.production.local
+.env.development.local
+
+# logs
+*.log
+
+# vercel
+.vercel
+
+# coverage
+coverage
+
+# misc
+.DS_Store
