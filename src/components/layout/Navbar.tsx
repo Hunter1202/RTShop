@@ -118,7 +118,7 @@ export default function Navbar() {
 
                 {/* Search Dropdown */}
                 {showSearch && (
-                  <div className="absolute right-0 top-12 w-80 card shadow-xl animate-slide-down z-50">
+                  <div className="fixed translate-y-2 right-4 w-64 card shadow-xl animate-slide-down z-50">
                     <div className="p-1">
                       <input
                         autoFocus

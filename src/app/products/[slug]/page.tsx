@@ -89,7 +89,7 @@ export default function ProductDetailPage() {
     if (!product || product.stock_quantity === 0) return;
     addItem(product, quantity);
     openCart();
-    toast.success(lang === 'vi' ? 'Da them vao gio!' : 'Added to cart!');
+    toast.success(lang === 'vi' ? 'Đã thêm vào giỏ!' : 'Added to cart!');
   };
 
   if (loading) {
@@ -231,8 +231,10 @@ export default function ProductDetailPage() {
             {desc && (
               <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>{desc}</p>
             )}
-
-            {!isOutOfStock && (
+              <div className="pb-8">
+                <a href={product.product_link} className="text-sm leading-relaxed text-blue-500 font-bold">{lang === 'vi' ? 'Link sản phẩm' : 'Link to product'}</a>
+              </div>
+           {!isOutOfStock && (
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex items-center rounded-lg border" style={{ borderColor: 'var(--border)' }}>
                   <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-9 h-9 flex items-center justify-center" style={{ color: 'var(--text)' }}>-</button>

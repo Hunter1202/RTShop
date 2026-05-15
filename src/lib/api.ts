@@ -77,6 +77,18 @@ export const orderApi = {
     api.patch(`/admin/orders/${id}/status`, data),
 };
 
+export const customOrderApi = {
+  create: (data: {
+    name: string;
+    phone: string;
+    facebook?: string;
+    email?: string;
+    services: string;
+    description: string;
+  }) => api.post('/custom-orders', data),
+  adminGetAll: (params?: Record<string, any>) => api.get('/admin/custom-orders', { params }),
+};
+
 // ─── Auth API ─────────────────────────────────────────────────────────────────
 
 export const authApi = {

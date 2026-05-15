@@ -1,13 +1,14 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ProductCard from '@/components/product/ProductCard';
-import { productApi, categoryApi, getCategoryName } from '@/lib/api';
+import { productApi, categoryApi, customOrderApi, getCategoryName } from '@/lib/api';
 import i18n from '@/i18n/config';
+import toast from 'react-hot-toast';
 
 export default function HomePage() {
   const { t } = useTranslation('common');
@@ -17,118 +18,166 @@ export default function HomePage() {
   const [newProducts, setNewProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [customSubmitting, setCustomSubmitting] = useState(false);
+  const [customForm, setCustomForm] = useState({
+    name: '',
+    phone: '',
+    facebook: '',
+    email: '',
+    services: '',
+    description: '',
+  });
 
   useEffect(() => {
-
     const loadData = async () => {
       try {
         const [featured, newest, cats] = await Promise.all([
-          productApi.getAll({
-            featured: 'true',
-            limit: 8,
-          }),
-
-          productApi.getAll({
-            sort: 'newest',
-            limit: 8,
-          }),
-
+          productApi.getAll({ featured: 'true', limit: 8 }),
+          productApi.getAll({ sort: 'newest', limit: 8 }),
           categoryApi.getAll(),
         ]);
 
         setFeaturedProducts(featured.data.data || []);
         setNewProducts(newest.data.data || []);
         setCategories(cats.data.data || []);
-
       } catch (err) {
         console.error('Failed to load homepage data:', err);
       } finally {
         setLoading(false);
       }
     };
+
     loadData();
   }, []);
+
+  const submitCustomOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCustomSubmitting(true);
+    try {
+      await customOrderApi.create(customForm);
+      toast.success(lang === 'vi' ? 'Chúng tôi sẽ sớm liên hệ tới bạn!' : 'Custom request sent successfully!');
+      setCustomForm({ name: '', phone: '', facebook: '', email: '', services: '', description: '' });
+    } catch (err: any) {
+      const resData = err.response?.data;
+      const errors = Array.isArray(resData?.errors) ? resData.errors : [];
+      if (errors.length) {
+        errors.forEach((x: any) => toast.error(`${x.field}: ${x.message}`));
+      } else {
+        toast.error(resData?.message || 'Failed to submit custom request');
+      }
+    } finally {
+      setCustomSubmitting(false);
+    }
+  };
 
   return (
     <div style={{ background: 'var(--bg)' }}>
       <Navbar />
-      {/* ───────────────── HERO ───────────────── */}
-        <div className="rt-modern">
-        <section className="hero">
-            <img src="/img/hero.webp" alt="RTShop hero background"/>
-            <div className="container hero-content">
-                <div className="hero-inner">
-                    <div className="hero-sub">{t('hero.badge')}</div>
-                    <h1>
-                        {t('hero.title')}
-                        <br />
-                    </h1>
-                    <p className="hero-text">{t('hero.subtitle')}</p>
-                    <div className="hero-buttons">
-                        <Link href="/products" className="btn-solid">{t('hero.cta_primary')}</Link>
-                        <Link href="/products?sort=newest" className="btn-outline">
-                            {lang === 'vi' ? 'Sản phẩm mới nhất' : 'View New Arrivals'}
-                        </Link>
-                    </div>
-                </div>
+      <section className="relative min-h-screen overflow-hidden bg-black text-[#f5f1e8]">
+        <img
+          src="/img/hero.webp"
+          alt="RTShop hero background"
+          fetchPriority="high"
+          className="absolute inset-0 h-full w-full object-cover opacity-45"
+        />
+
+        <div className="relative z-10 mx-auto flex min-h-[calc(100vh-120px)] w-[90%] max-w-[1200px] items-center pt-24">
+          <div className="max-w-[750px]">
+            <div className="mb-8 text-xs uppercase tracking-[0.4em] text-[#d0c8bc]">{t('hero.badge')}</div>
+
+            <h1 className="mb-8 text-4xl font-light leading-[1.02] md:text-5xl lg:text-[72px]">
+              {t('hero.title')}
+            </h1>
+
+            <p className="mb-10 max-w-[620px] text-base leading-8 text-[#d2cbc1] md:text-lg">
+              {t('hero.subtitle')}
+            </p>
+
+            <div className="flex flex-wrap gap-5">
+              <Link
+                href="/products"
+                className="bg-[#f5f1e8] px-8 py-4 text-[11px] uppercase tracking-[0.25em] text-black transition hover:opacity-85">
+                {t('hero.cta_primary')}
+              </Link>
+
+              <Link
+                href="/products?sort=newest"
+                className="border border-white/50 px-7 py-3.5 text-[11px] uppercase tracking-[0.2em] transition hover:bg-white hover:text-black">
+                {lang === 'vi' ? 'Sản phẩm mới' : 'New Arrivals'}
+              </Link>
             </div>
-        </section>
-        </div>
-
-      {/* ───────────────── CATEGORIES ───────────────── */}
-      {categories.length > 0 && (
-        <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-          <div className="text-center mb-6">
-            <h2 className="section-title">
-              {lang === 'vi' ? 'Danh mục' : 'Categories'}
-            </h2>
           </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        </div>
+      </section>
+
+      {categories.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mb-6 text-center">
+            <h2 className="section-title">{lang === 'vi' ? 'Danh mục' : 'Categories'}</h2>
+          </div>
+
+            <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-6">
                 {categories.slice(0, 6).map((cat, i) => (
-                    <Link key={cat.id} href={`/products?category=${cat.slug}`}
-                          className="group relative p-6 text-center rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-zinc-900 transition-all duration-300 hover:border-black dark:hover:border-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.05)]"
-                    >
-                        {/* Background Accent */}
-                        <div className="absolute top-0 left-0 w-full h-1 bg-black scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
-
-                        <p className="text-sm font-bold tracking-widest uppercase transition-colors duration-300">
-                            {getCategoryName(cat, lang)}
-                        </p>
-
-                        <div className="mt-4 flex items-center justify-center space-x-2">
-                            <span className="h-[1px] w-4 bg-gray-300 group-hover:w-8 transition-all duration-300" />
-                            <p className="text-[14px] font-medium text-gray-400">
-                                {cat.product_count}
-                            </p>
-                            <span className="h-[1px] w-4 bg-gray-300 group-hover:w-8 transition-all duration-300" />
+                    <Link
+                        key={cat.id}
+                        href={`/products?category=${cat.slug}`}
+                        className="group relative h-40 flex flex-col items-center justify-center rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-2"
+                        style={{
+                            background: 'var(--bg)',
+                            border: '1px solid var(--border-color, rgba(0,0,0,0.05))'
+                        }}>
+                        {/* 1. Background Glow & Mesh - Chỉ hiện rõ khi hover */}
+                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                            <div className="absolute -inset-[100%] animate-[spin_10s_linear_infinite] bg-[conic-gradient(from_0deg,transparent,rgba(59,130,246,0.1),transparent)]"></div>
                         </div>
+
+                        {/* 2. Content Container */}
+                        <div className="relative z-10 flex flex-col items-center">
+                            {/* Placeholder cho Icon - Bạn có thể thay bằng các SVG tương ứng với Slug */}
+                            <div className="mb-3 p-3 rounded-full bg-gray-500/5 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300 group-hover:scale-110 shadow-inner">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                            </div>
+
+                            <p className="text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300 group-hover:tracking-[0.3em]" style={{ color: 'var(--text)' }}>
+                                {getCategoryName(cat, lang)}
+                            </p>
+
+                            {/* Số lượng sản phẩm dạng Badge nhỏ gọn */}
+                            <div className="mt-2 px-2 py-0.5 rounded-full bg-blue-500/10 dark:bg-white/10 opacity-60 group-hover:opacity-100 transition-opacity">
+                               <span className="text-[10px] font-bold text-blue-600 dark:text-blue-300">
+                                 {cat.product_count}
+                               </span>
+                            </div>
+                        </div>
+
+                        {/* 3. Hiệu ứng "Scanner Line" chạy dọc card khi hover */}
+                        <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-blue-500/10 to-transparent -translate-y-full group-hover:animate-[scan_2s_linear_infinite]"></div>
+
+                        {/* 4. Bottom Accent Line */}
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-1 bg-blue-500 transition-all duration-500 group-hover:w-1/2 rounded-t-full shadow-[0_0_15px_rgba(59,130,246,0.8)]"></div>
                     </Link>
                 ))}
             </div>
         </section>
       )}
 
-      {/* ───────────────── FEATURED PRODUCTS ───────────────── */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-          <div className="text-center mb-6">
-              <h2 className="section-title">
-                  {t('products.featured')}
-              </h2>
-          </div>
-        <div className="flex items-end justify-end mb-6">
-          <Link
-            href="/products?featured=true"
-            className="text-sm font-semibold hover:underline"
-            style={{ color: 'var(--accent)' }}>
-            {t('common.view_all')} →
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mb-6 text-center">
+          <h2 className="section-title">{t('products.featured')}</h2>
+        </div>
+
+        <div className="mb-6 flex items-end justify-end">
+          <Link href="/products?featured=true" className="text-sm font-semibold hover:underline" style={{ color: 'var(--accent)' }}>
+            {t('common.view_all')}
           </Link>
         </div>
+
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="rounded-2xl overflow-hidden">
+              <div key={i} className="overflow-hidden rounded-2xl">
                 <div className="skeleton aspect-square" />
-                <div className="p-4 space-y-2">
+                <div className="space-y-2 p-4">
                   <div className="skeleton h-4 w-3/4 rounded" />
                   <div className="skeleton h-5 w-1/2 rounded" />
                 </div>
@@ -136,9 +185,9 @@ export default function HomePage() {
             ))}
           </div>
         ) : featuredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
             {featuredProducts.map((product, i) => (
-              <div key={product.id} className="animate-fade-in" style={{animationDelay: `${i * 0.05}s`,}}>
+              <div key={product.id} className="animate-fade-in" style={{ animationDelay: `${i * 0.05}s` }}>
                 <ProductCard product={product} />
               </div>
             ))}
@@ -146,262 +195,94 @@ export default function HomePage() {
         ) : null}
       </section>
 
-        <style jsx global>{`
-        .rt-modern {
-          font-family: 'Inter', sans-serif;
-          background: #000;
-          color: #f5f1e8;
-          overflow-x: hidden;
-        }
+      <section className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mb-8 text-center">
+          <h2 className="section-title">{lang === 'vi' ? 'Thiết kế website/dịch vụ theo yêu cầu' : 'Tailored website/services built for your exact needs'}</h2>
+        </div>
 
-        .rt-modern a {
-          text-decoration: none;
-          color: inherit;
-        }
+          <form onSubmit={submitCustomOrder} className="relative group overflow-hidden rounded-3xl p-[1px] transition-all duration-500 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)]">
+              {/* Hiệu ứng viền Gradient chạy xung quanh form khi hover */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-20 group-hover:opacity-50 transition-opacity"></div>
+              <div className="relative card space-y-6 p-8 bg-white/80 dark:bg-[#0f172a]/90 backdrop-blur-xl rounded-[23px] border-none">
+                  <div className="mb-8">
+                      <h3 className="text-2xl font-bold mb-2" style={{ color: 'var(--text)' }}>
+                          {lang === 'vi' ? 'Khởi động dự án' : 'Start a Project'}
+                      </h3>
+                      <p className="text-sm opacity-60" style={{ color: 'var(--text-secondary)' }}>
+                          {lang === 'vi' ? 'Để lại thông tin, RTS sẽ liên hệ tư vấn giải pháp tối ưu nhất.' : 'Leave your details, RTS will contact you for the best solution.'}
+                      </p>
+                  </div>
 
-        .rt-modern img {
-          width: 100%;
-          display: block;
-        }
+                  <div className="grid gap-6 sm:grid-cols-2">
+                      {[
+                          { id: 'name', label: lang === 'vi' ? 'Họ tên *' : 'Full name *', type: 'text', required: true },
+                          { id: 'phone', label: lang === 'vi' ? 'SĐT/Zalo/Whatsapp *' : 'Phone/Zalo/Whatsapp *', type: 'text', required: true },
+                          { id: 'facebook', label: 'Facebook/Messenger', type: 'text', required: false },
+                          { id: 'email', label: lang === 'vi' ? 'Email' : 'Email', type: 'email', required: false },
+                      ].map((field) => (
+                          <div key={field.id} className="relative group/input">
+                              <input
+                                  type={field.type}
+                                  id={field.id}
+                                  className="peer w-full bg-transparent border-b-2 py-2 outline-none transition-all placeholder-transparent"
+                                  style={{ borderColor: 'var(--border-color, rgba(156, 163, 175, 0.3))', color: 'var(--text)' }}
+                                  placeholder={field.label}
+                                  value={customForm[field.id]}
+                                  onChange={(e) => setCustomForm({ ...customForm, [field.id]: e.target.value })}
+                                  required={field.required}
+                              />
+                              <label
+                                  htmlFor={field.id}
+                                  className="absolute left-0 -top-3.5 text-xs transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-blue-500 opacity-60"
+                                  style={{ color: 'var(--text-secondary)' }}>
+                                  {field.label}
+                              </label>
+                              <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-blue-500 transition-all duration-300 peer-focus:w-full"></div>
+                          </div>
+                      ))}
+                  </div>
 
-        .rt-modern .container {
-          width: min(1200px, 90%);
-          margin: auto;
-        }
+                  <div className="relative group/input">
+                      <input
+                          className="peer w-full bg-transparent border-b-2 py-2 outline-none transition-all placeholder-transparent"
+                          style={{ borderColor: 'var(--border-color, rgba(156, 163, 175, 0.3))', color: 'var(--text)' }}
+                          placeholder="Service"
+                          value={customForm.services}
+                          onChange={(e) => setCustomForm({ ...customForm, services: e.target.value })}
+                          required
+                      />
+                      <label className="absolute left-0 -top-3.5 text-xs transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-blue-500 opacity-60" style={{ color: 'var(--text-secondary)' }}>
+                          {lang === 'vi' ? 'Dịch vụ (Website, App, Dashboard...) *' : 'Service interest *'}
+                      </label>
+                      <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-blue-500 transition-all duration-300 peer-focus:w-full"></div>
+                  </div>
+                  <div className="relative group/input">
+                      <textarea
+                          className="peer w-full bg-transparent border-b-2 py-2 outline-none transition-all placeholder-transparent resize-none"
+                          style={{ borderColor: 'var(--border-color, rgba(156, 163, 175, 0.3))', color: 'var(--text)' }}
+                          rows={4}
+                          placeholder="Description"
+                          value={customForm.description}
+                          onChange={(e) => setCustomForm({ ...customForm, description: e.target.value })}
+                          required
+                      />
+                      <label className="absolute left-0 -top-3.5 text-xs transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-blue-500 opacity-60" style={{ color: 'var(--text-secondary)' }}>
+                          {lang === 'vi' ? 'Mô tả chi tiết yêu cầu *' : 'Detailed description *'}
+                      </label>
+                      <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-blue-500 transition-all duration-300 peer-focus:w-full"></div>
+                  </div>
 
-        .rt-modern .hero {
-          position: relative;
-          min-height: 100vh;
-          overflow: hidden;
-        }
-
-        .rt-modern .hero > img {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          opacity: 0.45;
-        }
-        .rt-modern header {
-          position: relative;
-          z-index: 2;
-          padding: 35px 0;
-        }
-        .rt-modern .navbar {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 24px;
-        }
-        .rt-modern nav {
-          display: flex;
-          gap: 40px;
-          text-transform: uppercase;
-          font-size: 12px;
-          letter-spacing: 0.2em;
-          color: #d7d0c5;
-        }
-        .rt-modern nav a {
-          transition: 0.3s;
-        }
-        .rt-modern nav a:hover {
-          color: #fff;
-        }
-        .rt-modern .btn-outline {
-          border: 1px solid rgba(255, 255, 255, 0.5);
-          padding: 14px 28px;
-          font-size: 11px;
-          letter-spacing: 0.2em;
-          text-transform: uppercase;
-          transition: 0.3s;
-        }
-        .rt-modern .btn-outline:hover {
-          background: #fff;
-          color: #000;
-        }
-        .rt-modern .btn-solid {
-          background: #f5f1e8;
-          color: #000;
-          padding: 16px 34px;
-          font-size: 11px;
-          letter-spacing: 0.25em;
-          text-transform: uppercase;
-          transition: 0.3s;
-        }
-        .rt-modern .btn-solid:hover {
-          opacity: 0.85;
-        }
-        .rt-modern .hero-content {
-          position: relative;
-          z-index: 2;
-          min-height: calc(100vh - 120px);
-          display: flex;
-          align-items: center;
-        }
-        .rt-modern .hero-inner {
-          max-width: 750px;
-        }
-        .rt-modern .hero-sub {
-          font-size: 12px;
-          letter-spacing: 0.4em;
-          text-transform: uppercase;
-          color: #d0c8bc;
-          margin-bottom: 30px;
-        }
-        .rt-modern .hero h1 {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 82px;
-          line-height: 1;
-          font-weight: 300;
-          margin-bottom: 35px;
-        }
-        .rt-modern .hero-text,
-        .rt-modern .section-text {
-          color: #d2cbc1;
-          font-size: 18px;
-          line-height: 1.9;
-          max-width: 620px;
-          margin-bottom: 45px;
-        }
-
-        .rt-modern .hero-buttons {
-          display: flex;
-          gap: 20px;
-          flex-wrap: wrap;
-        }
-
-        .rt-modern section {
-          padding: 130px 0;
-          border-top: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .rt-modern .section-label {
-          text-transform: uppercase;
-          letter-spacing: 0.35em;
-          font-size: 11px;
-          color: #8f887e;
-          margin-bottom: 24px;
-        }
-
-        .rt-modern .section-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 60px;
-          line-height: 1.1;
-          font-weight: 300;
-          margin-bottom: 35px;
-          letter-spacing: 0;
-        }
-
-        .rt-modern .story-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 80px;
-          align-items: center;
-        }
-
-        .rt-modern .category-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 20px;
-        }
-
-        .rt-modern .category-card {
-          background: #0d0d0d;
-          border-radius: 20px;
-          padding: 28px;
-          transition: 0.3s;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .rt-modern .category-card:hover {
-          transform: translateY(-4px);
-          border-color: rgba(255, 255, 255, 0.24);
-        }
-
-        .rt-modern .category-card h3 {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 32px;
-          font-weight: 400;
-          margin-bottom: 12px;
-        }
-
-        .rt-modern .category-card p {
-          color: #bdb5aa;
-          line-height: 1.9;
-        }
-
-        .rt-modern .dishes-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: end;
-          margin-bottom: 70px;
-          gap: 30px;
-        }
-
-        .rt-modern .cards-grid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 28px;
-        }
-
-        .rt-modern .product-wrap {
-          background: #0d0d0d;
-          border-radius: 20px;
-          overflow: hidden;
-        }
-
-        .rt-modern .skeleton-card {
-          height: 340px;
-          border-radius: 20px;
-          background: linear-gradient(90deg, #111 25%, #181818 37%, #111 63%);
-          background-size: 400% 100%;
-          animation: rt-shimmer 1.5s ease-in-out infinite;
-        }
-        .rt-modern .experience {
-          text-align: center;
-          max-width: 900px;
-          margin: auto;
-        }
-        @keyframes rt-shimmer {
-          0% { background-position: 100% 0; }
-          100% { background-position: -100% 0; }
-        }
-        @media (max-width: 992px) {
-          .rt-modern .story-grid,
-          .rt-modern .cards-grid {
-            grid-template-columns: 1fr;
-          }
-          .rt-modern .category-grid {
-            grid-template-columns: 1fr;
-          }
-          .rt-modern .hero h1 {
-            font-size: 60px;
-          }
-          .rt-modern .section-title {
-            font-size: 46px;
-          }
-          .rt-modern nav {
-            display: none;
-          }
-          .rt-modern .dishes-header {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-        }
-        @media (max-width: 640px) {
-          .rt-modern .hero h1 {
-            font-size: 48px;
-          }
-          .rt-modern .section-title {
-            font-size: 38px;
-          }
-          .rt-modern .hero-text,
-          .rt-modern .section-text {
-            font-size: 16px;
-          }
-        }
-      `}</style>
+                  <button type="submit" disabled={customSubmitting}
+                      className="group relative w-full py-3 overflow-hidden rounded-xl font-bold tracking-widest text-white transition-all bg-blue-600 hover:bg-blue-700 hover:shadow-[0_0_20px_rgba(37,99,235,0.4)] disabled:opacity-50">
+                      <span className="relative z-10 text-sm">
+                        {customSubmitting ? (lang === 'vi' ? 'ĐANG GỬI...' : 'SUBMITTING...') : (lang === 'vi' ? 'GỬI YÊU CẦU' : 'SEND REQUEST')}
+                      </span>
+                      {/* Hiệu ứng vệt sáng chạy qua nút khi hover */}
+                      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                  </button>
+              </div>
+          </form>
+      </section>
       <Footer />
     </div>
   );

@@ -10,17 +10,26 @@ export default function Footer() {
   const { t } = useTranslation('common');
   const [email, setEmail] = useState('');
   const [subscribing, setSubscribing] = useState(false);
+  const [nextAllowedAt, setNextAllowedAt] = useState(0);
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+    const now = Date.now();
+    if (subscribing || now < nextAllowedAt) {
+      const sec = Math.ceil((nextAllowedAt - now) / 1000);
+      if (sec > 0) toast.error(`Please wait ${sec}s before subscribing again.`);
+      return;
+    }
     setSubscribing(true);
     try {
       await newsletterApi.subscribe(email);
       toast.success(t('footer.subscribe') + ' ' + t('common.success') + '!');
       setEmail('');
+      setNextAllowedAt(Date.now() + 15000);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to subscribe');
+      setNextAllowedAt(Date.now() + 5000);
     } finally {
       setSubscribing(false);
     }

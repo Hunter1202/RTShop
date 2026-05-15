@@ -1,14 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: {
-    domains: [
-      'images.unsplash.com',
-      'res.cloudinary.com',
-      'lh3.googleusercontent.com',
-      'cdn.rtshop.vn',
-    ],
-    formats: ['image/avif', 'image/webp'],
-  },
   // PWA headers
   async headers() {
     return [

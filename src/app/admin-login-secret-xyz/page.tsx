@@ -108,7 +108,6 @@ export default function AdminLoginPage() {
                   background: 'rgba(255,255,255,0.08)',
                   border: '1px solid rgba(255,255,255,0.15)',
                 }}
-                placeholder="admin@rtshop.com"
                 required
               />
             </div>

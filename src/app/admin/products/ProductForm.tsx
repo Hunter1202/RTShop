@@ -15,6 +15,7 @@ interface ProductForm {
   original_price: string;
   stock_quantity: string;
   category_id: string;
+  product_link: string;
   images: string[];
   is_featured: boolean;
   is_active: boolean;
@@ -23,6 +24,7 @@ interface ProductForm {
 const EMPTY_FORM: ProductForm = {
   name_vi: '', name_en: '', description_vi: '', description_en: '',
   price: '', original_price: '', stock_quantity: '0', category_id: '',
+  product_link: '',
   images: [''], is_featured: false, is_active: true,
 };
 
@@ -54,6 +56,7 @@ export default function ProductFormPage({ isEdit = false }: { isEdit?: boolean }
             original_price: p.original_price?.toString?.() || '',
             stock_quantity: p.stock_quantity?.toString?.() || '0',
             category_id: p.category_id ? String(p.category_id) : '',
+            product_link: p.product_link || '',
             images: Array.isArray(p.images) && p.images.length ? p.images : [''],
             is_featured: Number(p.is_featured) === 1 || p.is_featured === true,
             is_active: Number(p.is_active) === 1 || p.is_active === true,
@@ -89,6 +92,7 @@ export default function ProductFormPage({ isEdit = false }: { isEdit?: boolean }
         stock_quantity: parseInt(form.stock_quantity),
         category_id: form.category_id ? parseInt(form.category_id) : null,
         images: form.images.filter(img => img.trim()),
+        product_link: form.product_link.trim() || null,
       };
 
       if (isEdit && productId) {
@@ -211,6 +215,16 @@ export default function ProductFormPage({ isEdit = false }: { isEdit?: boolean }
                   <option key={cat.id} value={cat.id}>{cat.name_en} / {cat.name_vi}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text)' }}>Product Link (optional)</label>
+              <input
+                type="text"
+                value={form.product_link}
+                onChange={e => setForm({ ...form, product_link: e.target.value })}
+                className="input-field"
+                placeholder="https://external-link.example"
+              />
             </div>
             <div className="flex flex-col gap-3 justify-center">
               <label className="flex items-center gap-3 cursor-pointer">
